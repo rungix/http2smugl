@@ -7,16 +7,17 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/lucas-clemente/quic-go"
-	"github.com/marten-seemann/qpack"
+	"github.com/quic-go/qpack"
 )
 
-func sendHTTP3Request(connectAddr, serverName string, noTLS bool, request *HTTPMessage, timeout time.Duration) (response *HTTPMessage, err error) {
+func sendHTTP3Request(connectAddr, serverName string, noTLS bool, request *HTTPMessage, timeout time.Duration, sslKeylog bool) (response *HTTPMessage, err error) {
 	address := connectAddr
 	if _, _, err := net.SplitHostPort(connectAddr); err != nil {
 		address = net.JoinHostPort(address, "443")
@@ -52,17 +53,34 @@ func sendHTTP3Request(connectAddr, serverName string, noTLS bool, request *HTTPM
 		IP:   ip,
 		Port: portInt,
 	}
+	var tlsConfig tls.Config
+	if sslKeylog {
+		sslKeylogfile, err := os.OpenFile("/tmp/sslkey.log", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+		if err != nil {
+			panic(err)
+		}
+		defer sslKeylogfile.Close()
 
-	session, err := quic.DialEarlyContext(ctx, udpConn, udpAddr, serverName,
-		&tls.Config{
+		tlsConfig = tls.Config{
 			NextProtos:         []string{"h3", "h3-29"},
 			ServerName:         serverName,
 			InsecureSkipVerify: true,
-		},
+			KeyLogWriter:       sslKeylogfile,
+		}
+	} else {
+		tlsConfig = tls.Config{
+			NextProtos:         []string{"h3", "h3-29"},
+			ServerName:         serverName,
+			InsecureSkipVerify: true,
+		}
+	}
+
+	session, err := quic.DialEarlyContext(ctx, udpConn, udpAddr, serverName,
+		&tlsConfig,
 		&quic.Config{
 			Versions:           []quic.VersionNumber{quic.Version1, quic.VersionDraft29},
 			MaxIncomingStreams: -1,
-			KeepAlive:          true,
+			KeepAlivePeriod:    2 * time.Second,
 		})
 
 	if err != nil {

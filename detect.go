@@ -112,8 +112,8 @@ func Detect(params *DetectParams, connectTo string, timeout time.Duration, verbo
 	}
 
 	if verbose {
-		log.Printf("%s: valid=%s, invalid=%s, result=%v",
-			params, validResponses, invalidResponses, result)
+		log.Printf("%s: valid_req=%s, valid_resp=%s, invalid_req=%s, invalid_resp=%s, result=%v",
+			params, valid.AdditionalHeaders, validResponses, invalid.AdditionalHeaders, invalidResponses, result)
 	}
 	return result, nil
 }

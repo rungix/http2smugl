@@ -16,6 +16,7 @@ type RequestParams struct {
 	Body                []byte
 	Timeout             time.Duration
 	AddContentLength    bool
+	SSLKeyLog           bool
 }
 
 type HTTPMessage struct {
@@ -104,11 +105,16 @@ func DoRequest(params *RequestParams) (*HTTPMessage, error) {
 		targetAddr = params.Target.Host
 	}
 
+	fmt.Println("\n>>>>>>>>>>>>>>>>>>>>>>>>>")
+	for _, h := range headers {
+		fmt.Printf("%s: %s\n", h.Name, h.Value)
+	}
+
 	switch proto {
 	case "http2":
-		return sendHTTP2Request(targetAddr, params.Target.Host, false, &HTTPMessage{headers, params.Body}, params.Timeout)
+		return sendHTTP2Request(targetAddr, params.Target.Host, false, &HTTPMessage{headers, params.Body}, params.Timeout, params.SSLKeyLog)
 	case "http3":
-		return sendHTTP3Request(targetAddr, params.Target.Host, false, &HTTPMessage{headers, params.Body}, params.Timeout)
+		return sendHTTP3Request(targetAddr, params.Target.Host, false, &HTTPMessage{headers, params.Body}, params.Timeout, params.SSLKeyLog)
 	default:
 		panic(fmt.Errorf("invalid proto: %#v", proto))
 	}

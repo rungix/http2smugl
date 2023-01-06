@@ -5,13 +5,14 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/hpack"
 )
 
-func sendHTTP2Request(connectAddr, serverName string, noTLS bool, request *HTTPMessage, timeout time.Duration) (response *HTTPMessage, err error) {
+func sendHTTP2Request(connectAddr, serverName string, noTLS bool, request *HTTPMessage, timeout time.Duration, sslKeylog bool) (response *HTTPMessage, err error) {
 	address := connectAddr
 	if _, _, err := net.SplitHostPort(connectAddr); err != nil {
 		address = net.JoinHostPort(address, "443")
@@ -40,11 +41,26 @@ func sendHTTP2Request(connectAddr, serverName string, noTLS bool, request *HTTPM
 	if noTLS {
 		c = tcpConn
 	} else {
-		c = tls.Client(tcpConn, &tls.Config{
-			NextProtos:         []string{"h2"},
-			ServerName:         serverName,
-			InsecureSkipVerify: true,
-		})
+		if sslKeylog {
+			sslKeylogfile, err := os.OpenFile("/tmp/sslkey.log", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+			if err != nil {
+				panic(err)
+			}
+			defer sslKeylogfile.Close()
+			c = tls.Client(tcpConn, &tls.Config{
+				NextProtos:         []string{"h2"},
+				ServerName:         serverName,
+				InsecureSkipVerify: true,
+				KeyLogWriter:       sslKeylogfile,
+			})
+		} else {
+			c = tls.Client(tcpConn, &tls.Config{
+				NextProtos:         []string{"h2"},
+				ServerName:         serverName,
+				InsecureSkipVerify: true,
+			})
+		}
+
 	}
 
 	if _, err := c.Write(prepareHTTP2Request(request)); err != nil {

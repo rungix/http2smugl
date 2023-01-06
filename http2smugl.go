@@ -19,6 +19,7 @@ func main() {
 		// root options
 		timeout     time.Duration
 		connectAddr string
+		sslKeyLog   bool
 		// request subcommand options
 		bodyFile, bodyStr string
 		requestMethod     string
@@ -84,6 +85,7 @@ func main() {
 				AddContentLength: autoContentLength,
 				Body:             bodyToSend,
 				Timeout:          timeout,
+				SSLKeyLog:        sslKeyLog,
 			}, bodyLines)
 			return nil
 		},
@@ -146,6 +148,7 @@ func main() {
 
 	rootCmd.PersistentFlags().DurationVar(&timeout, "timeout", 10*time.Second, "timeout to all requests")
 	rootCmd.PersistentFlags().StringVar(&connectAddr, "connect-to", "", "override target ip")
+	rootCmd.PersistentFlags().BoolVar(&sslKeyLog, "sslkeylog", false, "log SSL KEY in /tmp/sslkey.log")
 	requestCmd.Flags().StringVar(&requestMethod, "method", "GET", "request method")
 	requestCmd.Flags().StringVar(&bodyStr, "body-str", "", "send this string to body (escape seqs like \\r \\n are supported)")
 	requestCmd.Flags().StringVar(&bodyFile, "body-file", "", "read request body from this file")
